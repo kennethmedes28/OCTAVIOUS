@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Guitar &amp; Piano Scale Explorer</title>
+<style>
+  :root{
+    --bg1:#14161d; --bg2:#1c1f29;
+    --board1:#3b2a1e; --board2:#2a1d14; --board-edge:#4a3626;
+    --wood-inlay:#6e5a44;
+    --title:#f4f1ea; --subtitle:#9a9fae;
+    --fret-label:#c9cdd8; --string-label:#e8c975;
+    --nut:#f4f1ea; --fret-line:#8d8378; --string-line:#d8d2c4;
+    --natural-fill:#2e3a4f; --natural-stroke:#7fa8d9;
+    --sharp-fill:#262b33; --sharp-stroke:#5a6472; --sharp-text:#9aa5b3;
+    --root-fill:#d99b2b; --root-stroke:#ffdf9b;
+    --scale-fill:#c1442e; --scale-stroke:#ffb199;
+    --blue-fill:#2a7f8f; --blue-stroke:#8fe3f0;
+    --note-text:#eaf1fb; --scale-text:#fff8ef;
+    --dim:#6b625a;
+    --accent:#d99b2b;
+    --white-key:#f4f1ea; --white-key-stroke:#8d8378; --white-key-text:#2a1d14;
+    --black-key:#1c1f29; --black-key-stroke:#000; --black-key-text:#c9cdd8;
+  }
+  *{box-sizing:border-box;}
+  html{color-scheme:dark;}
+  body{
+    margin:0; padding:40px 20px 80px;
+    background:linear-gradient(180deg,var(--bg1),var(--bg2));
+    font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;
+    color:var(--title);
+    display:flex; flex-direction:column; align-items:center;
+  }
+  h1{font-size:26px; font-weight:800; margin:0 0 6px;}
+  .lede{color:var(--subtitle); font-size:14px; margin:0 0 30px; text-align:center;}
+  .panel{
+    width:100%; max-width:1234px;
+    background:rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.07);
+    border-radius:14px;
+    padding:22px 26px;
+    margin-bottom:28px;
+  }
+  .panel h2{margin:0 0 4px; font-size:20px;}
+  .panel .sub{color:var(--subtitle); font-size:13px; margin-bottom:14px;}
+  svg{display:block; width:100%; height:auto;}
+
+  .controls{
+    display:flex; gap:22px; flex-wrap:wrap;
+    align-items:flex-end;
+    width:100%; max-width:1234px;
+    margin-bottom:26px;
+  }
+  .control-group{display:flex; flex-direction:column; gap:6px;}
+  .control-group label{
+    font-size:12px; text-transform:uppercase; letter-spacing:0.08em;
+    color:var(--subtitle); font-weight:700;
+  }
+  select{
+    appearance:none; -webkit-appearance:none;
+    background:linear-gradient(180deg,#2a2e3a,#1f222c);
+    color:var(--title);
+    border:1.5px solid rgba(217,155,43,0.4);
+    border-radius:8px;
+    padding:10px 40px 10px 14px;
+    font-size:15px; font-weight:600;
+    min-width:220px;
+    cursor:pointer;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'><path d='M1 1l6 6 6-6' stroke='%23e8c975' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat;
+    background-position:right 14px center;
+  }
+
+  optgroup{
+    background:#1f222c;
+    color:#f4f1ea;
+  }
+
+  select:focus{outline:2px solid var(--accent); outline-offset:2px;}
+  select:hover{border-color:rgba(217,155,43,0.8);}
+  select option{
+    background:#1f222c;
+    color:#f4f1ea;
+  }
+
+  .legend{
+    display:flex; gap:22px; flex-wrap:wrap;
+    font-size:12.5px; color:var(--subtitle);
+    max-width:1234px; width:100%; margin:-8px 0 24px 2px;
+  }
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .swatch{width:13px; height:13px; border-radius:50%; display:inline-block;}
+  .sw-root{background:var(--root-fill); border:2px solid var(--root-stroke);}
+  .sw-scale{background:var(--scale-fill); border:2px solid var(--scale-stroke);}
+  .sw-blue{background:var(--blue-fill); border:2px solid var(--blue-stroke);}
+  .sw-dim{background:var(--dim); opacity:0.6;}
+
+  .api-settings-panel{
+    width:100%; max-width:1234px;
+    background:rgba(120,110,220,0.07);
+    border:1px solid rgba(120,110,220,0.3);
+    border-radius:14px;
+    padding:18px 24px;
+    margin-bottom:20px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .api-settings-panel h2{margin:0; font-size:17px; color:#9b90e8; display:flex; align-items:center; gap:8px; cursor:pointer;}
+  .api-settings-panel .sub{color:var(--subtitle); font-size:13px; margin:0;}
+  .api-settings-panel .caret{font-size:12px; transition:transform 0.15s ease;}
+  .api-settings-panel.is-collapsed .caret{transform:rotate(-90deg);}
+  .api-settings-body{display:flex; flex-direction:column; gap:12px;}
+  .api-settings-panel.is-collapsed .api-settings-body{display:none;}
+  .api-settings-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;}
+  .api-settings-row .control-group{display:flex; flex-direction:column; gap:6px;}
+  .api-settings-row label{
+    font-size:12px; text-transform:uppercase; letter-spacing:0.08em;
+    color:var(--subtitle); font-weight:700;
+  }
+  #providerSelect{
+    appearance:none; -webkit-appearance:none;
+    background:linear-gradient(180deg,#2a2e3a,#1f222c);
+    color:var(--title);
+    border:1.5px solid rgba(120,110,220,0.4);
+    border-radius:8px;
+    padding:10px 40px 10px 14px;
+    font-size:15px; font-weight:600;
+    min-width:180px;
+    cursor:pointer;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'><path d='M1 1l6 6 6-6' stroke='%239b90e8' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat;
+    background-position:right 14px center;
+  }
+  #providerSelect:focus{outline:2px solid #9b90e8; outline-offset:2px;}
+  #apiKeyInput{
+    flex:1; min-width:220px;
+    background:linear-gradient(180deg,#2a2e3a,#1f222c);
+    color:var(--title);
+    border:1.5px solid rgba(120,110,220,0.4);
+    border-radius:8px;
+    padding:10px 14px;
+    font-size:15px;
+    font-family:inherit;
+  }
+  #apiKeyInput:focus{outline:2px solid #9b90e8; outline-offset:2px;}
+  #apiKeyInput::placeholder{color:var(--dim);}
+  .api-key-toggle{
+    display:flex; align-items:center; gap:6px;
+    font-size:12px; color:var(--subtitle); user-select:none; cursor:pointer;
+    white-space:nowrap;
+  }
+  #saveApiKeyBtn{
+    appearance:none; -webkit-appearance:none;
+    background:linear-gradient(180deg,#7a6fe0,#5f52c9);
+    color:#f4f1ea;
+    border:1.5px solid rgba(155,144,232,0.6);
+    border-radius:8px;
+    padding:10px 20px;
+    font-size:14px; font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  #saveApiKeyBtn:hover:not(:disabled){border-color:rgba(155,144,232,0.9);}
+  #saveApiKeyBtn:disabled{opacity:0.6; cursor:default;}
+  .provider-badges{display:flex; gap:8px; flex-wrap:wrap;}
+  .provider-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 10px; border-radius:6px;
+    background:linear-gradient(180deg,#2a2e3a,#1f222c);
+    border:1.5px solid rgba(255,255,255,0.12);
+    font-weight:700; font-size:12px; color:var(--subtitle);
+  }
+  .provider-badge.is-set{border-color:rgba(143,227,160,0.6); color:#8fe3a0;}
+  .provider-badge.is-active{border-color:rgba(155,144,232,0.9); color:#c9c2f5; background:linear-gradient(180deg,#332a5e,#241b45);}
+  .api-status{font-size:13px; min-height:18px;}
+  .api-status.is-loading{color:var(--subtitle);}
+  .api-status.is-success{color:#8fe3a0;}
+  .api-status.is-error{color:#e07a6b;}
+  .api-mode-note{font-size:12px; color:var(--subtitle); line-height:1.5;}
+
+  .song-lookup-panel{
+    width:100%; max-width:1234px;
+    background:rgba(193,68,46,0.06);
+    border:1px solid rgba(193,68,46,0.28);
+    border-radius:14px;
+    padding:18px 24px;
+    margin-bottom:28px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .song-lookup-panel h2{margin:0; font-size:17px; color:var(--scale-fill);}
+  .song-lookup-panel .sub{color:var(--subtitle); font-size:13px; margin:0;}
+  .song-lookup-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  #songInput{
+    flex:1; min-width:220px;
+    background:linear-gradient(180deg,#2a2e3a,#1f222c);
+    color:var(--title);
+    border:1.5px solid rgba(193,68,46,0.4);
+    border-radius:8px;
+    padding:10px 14px;
+    font-size:15px;
+  }
+  #songInput:focus{outline:2px solid var(--scale-fill); outline-offset:2px;}
+  #songInput::placeholder{color:var(--dim);}
+  #songLookupBtn{
+    appearance:none; -webkit-appearance:none;
+    background:linear-gradient(180deg,#c1442e,#9c3624);
+    color:var(--scale-text);
+    border:1.5px solid rgba(255,177,153,0.5);
+    border-radius:8px;
+    padding:10px 20px;
+    font-size:14px; font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  #songLookupBtn:hover:not(:disabled){border-color:rgba(255,177,153,0.9);}
+  #songLookupBtn:disabled{opacity:0.6; cursor:default;}
+  .song-status{font-size:13px; min-height:18px;}
+  .song-status.is-loading{color:var(--subtitle);}
+  .song-status.is-success{color:#8fe3a0;}
+  .song-status.is-error{color:#e07a6b;}
+
+  .keysig-panel{
+    width:100%; max-width:1234px;
+    background:rgba(217,155,43,0.06);
+    border:1px solid rgba(217,155,43,0.28);
+    border-radius:14px;
+    padding:18px 24px;
+    margin-bottom:26px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .keysig-panel h2{margin:0; font-size:17px; color:var(--accent);}
+  .keysig-panel .body{font-size:14px; color:var(--title); line-height:1.5;}
+  .keysig-badges{display:flex; gap:8px; flex-wrap:wrap;}
+  .accidental-badge{
+    display:inline-block; padding:4px 10px; border-radius:6px;
+    background:linear-gradient(180deg,#2a2e3a,#1f222c);
+    border:1.5px solid rgba(217,155,43,0.5);
+    font-weight:700; font-size:13px; color:var(--title);
+  }
+  .accidental-badge.none{opacity:0.6; font-weight:600; font-style:italic;}
+  .keysig-note{font-size:12px; color:var(--subtitle);}
+
+  .chords-panel{
+    width:100%; max-width:1234px;
+    background:rgba(42,127,143,0.06);
+    border:1px solid rgba(42,127,143,0.28);
+    border-radius:14px;
+    padding:18px 24px;
+    margin-bottom:26px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .chords-panel h2{margin:0; font-size:17px; color:var(--blue-fill);}
+  .chords-panel .body{font-size:14px; color:var(--title); line-height:1.5;}
+  .chord-grid{display:flex; gap:10px; flex-wrap:wrap;}
+  .chord-card{
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    padding:8px 14px; border-radius:8px; min-width:64px;
+    background:linear-gradient(180deg,#2a2e3a,#1f222c);
+    border:1.5px solid rgba(42,127,143,0.5);
+    cursor:pointer; user-select:none;
+    transition:background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  }
+  .chord-card:hover{border-color:rgba(42,127,143,0.9); transform:translateY(-1px);}
+  .chord-card.is-root{border-color:rgba(217,155,43,0.8); background:linear-gradient(180deg,#332a1a,#241d12);}
+  .chord-card .roman{font-size:11px; color:var(--subtitle); font-weight:700; letter-spacing:0.04em;}
+  .chord-card .symbol{font-size:16px; font-weight:800; color:var(--title);}
+  .chord-card.is-root .symbol{color:var(--accent);}
+  .chord-card .chord-notes{
+    display:none; font-size:11px; font-weight:700; color:var(--blue-fill);
+    margin-top:3px; padding-top:3px; border-top:1px solid rgba(255,255,255,0.15);
+    white-space:nowrap;
+  }
+  .chord-card.is-open{
+    background:linear-gradient(180deg,#20424a,#173036);
+    border-color:rgba(143,227,240,0.9);
+  }
+  .chord-card.is-open.is-root{
+    background:linear-gradient(180deg,#3a2f16,#2a2110);
+    border-color:rgba(255,223,155,0.9);
+  }
+  .chord-card.is-open .chord-notes{display:block; color:var(--blue-stroke);}
+  .chord-card.is-open.is-root .chord-notes{color:var(--root-stroke);}
+  .chords-note{font-size:12px; color:var(--subtitle);}
+  #chordsToggleAll{
+    appearance:none; -webkit-appearance:none;
+    background:linear-gradient(180deg,#2a2e3a,#1f222c);
+    color:var(--title);
+    border:1.5px solid rgba(42,127,143,0.5);
+    border-radius:8px;
+    padding:7px 14px;
+    font-size:13px; font-weight:700;
+    cursor:pointer;
+  }
+  #chordsToggleAll:hover{border-color:rgba(42,127,143,0.9);}
+
+  @media (max-width:640px){
+    select{min-width:160px;}
+  }
+</style>
+</head>
+<body>
+
+<h1>Guitar &amp; Piano Fretboard/Keyboard Reference</h1>
+<p class="lede">Frets 0–12 (guitar) &amp; 2 octaves (piano) &nbsp;|&nbsp; Tuning (top to bottom): e B G D A E &nbsp;|&nbsp; Pick a key and scale below to see both instruments plus the key signature</p>
+
+<!-- API SETTINGS (optional, local server only) -->
+<div class="api-settings-panel is-collapsed" id="apiSettingsPanel">
+  <h2 id="apiSettingsToggle"><span class="caret">▾</span> API Settings <span style="font-weight:400; color:var(--subtitle); font-size:12px;">(optional)</span></h2>
+  <p class="sub">Bring your own API key so Song Key Lookup runs on your terms. Only needed when running Octavious locally via <code>start.sh</code> / <code>start.bat</code> — keys are saved to your local <code>.env</code> file and never leave your machine except in direct calls to the provider you pick.</p>
+  <div class="api-settings-body">
+    <div class="api-settings-row">
+      <div class="control-group">
+        <label for="providerSelect">Provider</label>
+        <select id="providerSelect">
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="openai">OpenAI</option>
+          <option value="groq">Groq</option>
+          <option value="gemini">Google Gemini</option>
+        </select>
+      </div>
+      <div class="control-group" style="flex:1;">
+        <label for="apiKeyInput">API Key</label>
+        <input type="password" id="apiKeyInput" placeholder="Paste your API key" autocomplete="off" spellcheck="false">
+      </div>
+      <label class="api-key-toggle"><input type="checkbox" id="apiKeyShowToggle"> Show</label>
+      <button type="button" id="saveApiKeyBtn">Save to .env</button>
+    </div>
+    <div class="provider-badges" id="providerBadges"></div>
+    <div class="api-status" id="apiSettingsStatus"></div>
+    <div class="api-mode-note" id="apiModeNote"></div>
+  </div>
+</div>
+
+<!-- SONG KEY LOOKUP -->
+<div class="song-lookup-panel">
+  <h2>Look Up a Song's Key</h2>
+  <p class="sub">Type a song (add the artist for accuracy) — this searches the web and sets the key/scale below automatically. Requires an internet connection.</p>
+  <div class="song-lookup-row">
+    <input type="text" id="songInput" placeholder="e.g. Blinding Lights - The Weeknd" autocomplete="off">
+    <button type="button" id="songLookupBtn">Find Key</button>
+  </div>
+  <div class="song-status" id="songLookupStatus"></div>
+</div>
+
+<!-- STATIC CHROMATIC REFERENCE BOARD -->
+<div class="panel">
+  <h2>Full Fretboard — All Notes (Standard Tuning)</h2>
+  <div class="sub">Frets 0-12 | Sharps shown as #</div>
+  <svg id="refBoard" viewBox="0 0 1234 500" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<!-- STATIC CHROMATIC REFERENCE PIANO -->
+<div class="panel">
+  <h2>Full Piano Keyboard — All Notes</h2>
+  <div class="sub">2 octaves | Every white and black key labeled</div>
+  <svg id="pianoRef" viewBox="0 0 1210 300" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <div class="control-group">
+    <label for="keySelect">Key</label>
+    <select id="keySelect"></select>
+  </div>
+  <div class="control-group">
+    <label for="scaleSelect">Scale</label>
+    <select id="scaleSelect">
+      <optgroup label="Pentatonic &amp; Blues">
+        <option value="major">Major Pentatonic</option>
+        <option value="minor">Minor Pentatonic</option>
+        <option value="blues">Blues Scale</option>
+      </optgroup>
+      <optgroup label="Modes">
+        <option value="ionian">Ionian (Major)</option>
+        <option value="dorian">Dorian</option>
+        <option value="phrygian">Phrygian</option>
+        <option value="lydian">Lydian</option>
+        <option value="mixolydian">Mixolydian</option>
+        <option value="aeolian">Aeolian (Nat. Minor)</option>
+        <option value="locrian">Locrian</option>
+      </optgroup>
+    </select>
+  </div>
+</div>
+
+<!-- KEY SIGNATURE -->
+<div class="keysig-panel">
+  <h2>Key Signature</h2>
+  <div class="body" id="keySigBody">—</div>
+  <div class="keysig-badges" id="keySigBadges"></div>
+  <div class="keysig-note">Pentatonic and blues scales aren't traditionally notated with their own key signature — the signature shown follows the parent major/minor key by convention.</div>
+</div>
+
+<!-- CHORDS IN THE KEY -->
+<div class="chords-panel">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+    <h2>Chords in the Key</h2>
+    <button id="chordsToggleAll" type="button">Show all</button>
+  </div>
+  <div class="body" id="chordsBody">—</div>
+  <div class="chord-grid" id="chordsGrid"></div>
+  <div class="chords-note" id="chordsNote"></div>
+</div>
+
+<div class="legend">
+  <span><i class="swatch sw-root"></i> Root note</span>
+  <span><i class="swatch sw-scale"></i> Scale note</span>
+  <span><i class="swatch sw-blue"></i> Blue note (♭5)</span>
+  <span><i class="swatch sw-dim"></i> Not in scale</span>
+</div>
+
+<!-- INTERACTIVE SCALE BOARD -->
+<div class="panel">
+  <h2 id="scaleTitle">A Minor Pentatonic Scale</h2>
+  <div class="sub" id="scaleSub">Notes: A - C - D - E - G | Root note A highlighted in gold</div>
+  <svg id="scaleBoard" viewBox="0 0 1234 500" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<!-- INTERACTIVE SCALE PIANO -->
+<div class="panel">
+  <h2 id="pianoScaleTitle">A Minor Pentatonic — Piano</h2>
+  <div class="sub">Same notes highlighted on a 2-octave keyboard</div>
+  <svg id="pianoScale" viewBox="0 0 1210 300" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<script>
+const CHROMATIC = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+// Strings top-to-bottom: e B G D A E -> pitch-class index of open string
+const STRINGS = [
+  {label:"e", open:4},
+  {label:"B", open:11},
+  {label:"G", open:7},
+  {label:"D", open:2},
+  {label:"A", open:9},
+  {label:"E", open:4},
+];
+const FRET_X = [114,201,283,365,447,529,611,693,775,857,939,1021,1103];
+const FRETLINE_X = [160,242,324,406,488,570,652,734,816,898,980,1062,1144];
+const STRING_Y = [140,202,264,326,388,450];
+const STRING_WEIGHT = [1.2,1.4,1.8,2.2,2.6,3.0];
+
+const SCALE_INTERVALS = {
+  major: [0,2,4,7,9],
+  minor: [0,3,5,7,10],
+  blues: [0,3,5,6,7,10], // minor pentatonic + b5 "blue note"
+  ionian:     [0,2,4,5,7,9,11],
+  dorian:     [0,2,3,5,7,9,10],
+  phrygian:   [0,1,3,5,7,8,10],
+  lydian:     [0,2,4,6,7,9,11],
+  mixolydian: [0,2,4,5,7,9,10],
+  aeolian:    [0,2,3,5,7,8,10],
+  locrian:    [0,1,3,5,6,8,10],
+};
+const SCALE_LABEL = {
+  major: "Major Pentatonic",
+  minor: "Minor Pentatonic",
+  blues: "Blues",
+  ionian: "Ionian (Major)",
+  dorian: "Dorian",
+  phrygian: "Phrygian",
+  lydian: "Lydian",
+  mixolydian: "Mixolydian",
+  aeolian: "Aeolian (Natural Minor)",
+  locrian: "Locrian",
+};
+const MODE_KEYS = new Set(["ionian","dorian","phrygian","lydian","mixolydian","aeolian","locrian"]);
+const BLUE_NOTE_INTERVAL = 6; // flat 5th, the added "blue note"
+
+function frame(){
+  return `
+    <defs>
+      <linearGradient id="board-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#3b2a1e"/>
+        <stop offset="100%" stop-color="#2a1d14"/>
+      </linearGradient>
+    </defs>
+    <rect x="160" y="106" width="984" height="378" rx="10" fill="url(#board-grad)" stroke="#4a3626" stroke-width="2"/>
+    <text x="114" y="98" text-anchor="middle" font-size="13" font-weight="600" fill="#c9cdd8">open</text>
+    ${FRET_X.slice(1).map((x,i)=>`<text x="${x}" y="98" text-anchor="middle" font-size="13" font-weight="600" fill="#c9cdd8">${i+1}</text>`).join("")}
+    <circle cx="365" cy="295" r="14" fill="#6e5a44" opacity="0.55"/>
+    <circle cx="529" cy="295" r="14" fill="#6e5a44" opacity="0.55"/>
+    <circle cx="693" cy="295" r="14" fill="#6e5a44" opacity="0.55"/>
+    <circle cx="857" cy="295" r="14" fill="#6e5a44" opacity="0.55"/>
+    <circle cx="1103" cy="255" r="12" fill="#6e5a44" opacity="0.55"/>
+    <circle cx="1103" cy="335" r="12" fill="#6e5a44" opacity="0.55"/>
+    <line x1="160" y1="140" x2="160" y2="450" stroke="#f4f1ea" stroke-width="7"/>
+    ${FRETLINE_X.slice(1).map(x=>`<line x1="${x}" y1="140" x2="${x}" y2="450" stroke="#8d8378" stroke-width="2.5"/>`).join("")}
+    ${STRING_Y.map((y,i)=>`<line x1="94" y1="${y}" x2="1144" y2="${y}" stroke="#d8d2c4" stroke-width="${STRING_WEIGHT[i]}"/>`).join("")}
+    ${STRING_Y.map((y,i)=>`<text x="66" y="${y+6}" text-anchor="middle" font-size="15" font-weight="700" font-style="italic" fill="#e8c975">${STRINGS[i].label}</text>`).join("")}
+  `;
+}
+
+function renderReferenceBoard(){
+  const svg = document.getElementById("refBoard");
+  svg.setAttribute("viewBox","0 0 1234 500");
+  let notes = "";
+  STRINGS.forEach((s,rowIdx)=>{
+    const y = STRING_Y[rowIdx];
+    FRET_X.forEach((x,fret)=>{
+      const idx = (s.open + fret) % 12;
+      const name = CHROMATIC[idx];
+      const isSharp = name.includes("#");
+      if(isSharp){
+        notes += `<circle cx="${x}" cy="${y}" r="17" fill="#262b33" stroke="#5a6472" stroke-width="1.5"/>
+                  <text x="${x}" y="${y+5}" text-anchor="middle" font-size="11" font-weight="600" fill="#9aa5b3">${name}</text>`;
+      } else {
+        notes += `<circle cx="${x}" cy="${y}" r="17" fill="#2e3a4f" stroke="#7fa8d9" stroke-width="1.5"/>
+                  <text x="${x}" y="${y+5}" text-anchor="middle" font-size="13" font-weight="700" fill="#eaf1fb">${name}</text>`;
+      }
+    });
+  });
+  svg.innerHTML = frame() + notes;
+}
+
+function renderScaleBoard(rootIdx, scaleType){
+  const svg = document.getElementById("scaleBoard");
+  svg.setAttribute("viewBox","0 0 1234 500");
+  const intervals = SCALE_INTERVALS[scaleType];
+  const scaleSet = new Set(intervals.map(i => (rootIdx + i) % 12));
+  const blueIdx = scaleType === "blues" ? (rootIdx + BLUE_NOTE_INTERVAL) % 12 : -1;
+
+  let notes = "";
+  STRINGS.forEach((s,rowIdx)=>{
+    const y = STRING_Y[rowIdx];
+    FRET_X.forEach((x,fret)=>{
+      const idx = (s.open + fret) % 12;
+      const name = CHROMATIC[idx];
+      if(idx === rootIdx){
+        notes += `<circle cx="${x}" cy="${y}" r="17" fill="#d99b2b" stroke="#ffdf9b" stroke-width="2"/>
+                  <text x="${x}" y="${y+5}" text-anchor="middle" font-size="13" font-weight="700" fill="#fff8ef">${name}</text>`;
+      } else if(idx === blueIdx){
+        notes += `<circle cx="${x}" cy="${y}" r="17" fill="#2a7f8f" stroke="#8fe3f0" stroke-width="1.5"/>
+                  <text x="${x}" y="${y+5}" text-anchor="middle" font-size="13" font-weight="700" fill="#fff8ef">${name}</text>`;
+      } else if(scaleSet.has(idx)){
+        notes += `<circle cx="${x}" cy="${y}" r="17" fill="#c1442e" stroke="#ffb199" stroke-width="1.5"/>
+                  <text x="${x}" y="${y+5}" text-anchor="middle" font-size="13" font-weight="700" fill="#fff8ef">${name}</text>`;
+      } else {
+        notes += `<circle cx="${x}" cy="${y}" r="3.5" fill="#6b625a" opacity="0.4"/>`;
+      }
+    });
+  });
+  svg.innerHTML = frame() + notes;
+
+  const rootName = CHROMATIC[rootIdx];
+  const scaleNoteNames = intervals.map(i => CHROMATIC[(rootIdx+i)%12]);
+  const kindWord = MODE_KEYS.has(scaleType) ? "Mode" : "Scale";
+  document.getElementById("scaleTitle").textContent = `${rootName} ${SCALE_LABEL[scaleType]} ${kindWord}`;
+  document.getElementById("scaleSub").textContent =
+    `Notes: ${scaleNoteNames.join(" - ")} | Root note ${rootName} highlighted in gold`;
+}
+
+/* ---------------- PIANO ---------------- */
+
+const PIANO_MARGIN = 20;
+const WHITE_W = 78;
+const WHITE_H = 210;
+const BLACK_W = 46;
+const BLACK_H = 128;
+const KEY_TOP = 50;
+const NUM_OCTAVES = 2;
+const WHITE_PATTERN = [0,2,4,5,7,9,11]; // C D E F G A B
+const BLACK_AFTER = {0:1,1:3,3:6,4:8,5:10}; // white-index-in-octave -> pc of black key to its right
+
+function pianoWhiteKeys(){
+  const keys = [];
+  const totalWhite = NUM_OCTAVES*7+1;
+  for(let gi=0; gi<totalWhite; gi++){
+    const pos = gi%7;
+    keys.push({gi, pc: WHITE_PATTERN[pos]});
+  }
+  return keys;
+}
+function pianoBlackKeys(){
+  const keys = [];
+  const totalWhite = NUM_OCTAVES*7+1;
+  for(let gi=0; gi<totalWhite-1; gi++){
+    const pos = gi%7;
+    if(BLACK_AFTER.hasOwnProperty(pos)){
+      keys.push({afterGi: gi, pc: BLACK_AFTER[pos]});
+    }
+  }
+  return keys;
+}
+
+function renderPianoReference(){
+  const svg = document.getElementById("pianoRef");
+  svg.setAttribute("viewBox","0 0 1210 300");
+  let html = "";
+  pianoWhiteKeys().forEach(k=>{
+    const x = PIANO_MARGIN + k.gi*WHITE_W;
+    html += `<rect x="${x}" y="${KEY_TOP}" width="${WHITE_W}" height="${WHITE_H}" rx="4" fill="#f4f1ea" stroke="#8d8378" stroke-width="1.5"/>
+             <text x="${x+WHITE_W/2}" y="${KEY_TOP+WHITE_H-12}" text-anchor="middle" font-size="14" font-weight="700" fill="#2a1d14">${CHROMATIC[k.pc]}</text>`;
+  });
+  pianoBlackKeys().forEach(k=>{
+    const x = PIANO_MARGIN + (k.afterGi+1)*WHITE_W - BLACK_W/2;
+    html += `<rect x="${x}" y="${KEY_TOP}" width="${BLACK_W}" height="${BLACK_H}" rx="3" fill="#1c1f29" stroke="#000" stroke-width="1"/>
+             <text x="${x+BLACK_W/2}" y="${KEY_TOP+BLACK_H-12}" text-anchor="middle" font-size="11" font-weight="600" fill="#c9cdd8">${CHROMATIC[k.pc]}</text>`;
+  });
+  svg.innerHTML = html;
+}
+
+function renderPianoScale(rootIdx, scaleType){
+  const svg = document.getElementById("pianoScale");
+  svg.setAttribute("viewBox","0 0 1210 300");
+  const intervals = SCALE_INTERVALS[scaleType];
+  const scaleSet = new Set(intervals.map(i => (rootIdx + i) % 12));
+  const blueIdx = scaleType === "blues" ? (rootIdx + BLUE_NOTE_INTERVAL) % 12 : -1;
+
+  function colorsFor(pc, isWhite){
+    if(pc === rootIdx) return {fill:"#d99b2b", stroke:"#ffdf9b", text:"#3a2a06"};
+    if(pc === blueIdx) return {fill:"#2a7f8f", stroke:"#8fe3f0", text:"#062226"};
+    if(scaleSet.has(pc)) return {fill:"#c1442e", stroke:"#ffb199", text:"#330906"};
+    return isWhite
+      ? {fill:"#f4f1ea", stroke:"#8d8378", text:"#2a1d14"}
+      : {fill:"#1c1f29", stroke:"#000", text:"#c9cdd8"};
+  }
+
+  let html = "";
+  pianoWhiteKeys().forEach(k=>{
+    const x = PIANO_MARGIN + k.gi*WHITE_W;
+    const c = colorsFor(k.pc, true);
+    html += `<rect x="${x}" y="${KEY_TOP}" width="${WHITE_W}" height="${WHITE_H}" rx="4" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.5"/>
+             <text x="${x+WHITE_W/2}" y="${KEY_TOP+WHITE_H-12}" text-anchor="middle" font-size="14" font-weight="700" fill="${c.text}">${CHROMATIC[k.pc]}</text>`;
+  });
+  pianoBlackKeys().forEach(k=>{
+    const x = PIANO_MARGIN + (k.afterGi+1)*WHITE_W - BLACK_W/2;
+    const c = colorsFor(k.pc, false);
+    html += `<rect x="${x}" y="${KEY_TOP}" width="${BLACK_W}" height="${BLACK_H}" rx="3" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1"/>
+             <text x="${x+BLACK_W/2}" y="${KEY_TOP+BLACK_H-12}" text-anchor="middle" font-size="11" font-weight="600" fill="${c.text}">${CHROMATIC[k.pc]}</text>`;
+  });
+  svg.innerHTML = html;
+
+  const rootName = CHROMATIC[rootIdx];
+  const kindWord = MODE_KEYS.has(scaleType) ? "Mode" : "Scale";
+  document.getElementById("pianoScaleTitle").textContent = `${rootName} ${SCALE_LABEL[scaleType]} ${kindWord} — Piano`;
+}
+
+/* ---------------- KEY SIGNATURES ---------------- */
+
+// Standard circle-of-fifths key signatures, indexed by major-key root pitch class.
+const MAJOR_KEY_SIG = {
+  0:  {count:0, type:"none",  notes:[]},                                   // C
+  1:  {count:5, type:"flat",  notes:["Bb","Eb","Ab","Db","Gb"]},           // Db
+  2:  {count:2, type:"sharp", notes:["F#","C#"]},                          // D
+  3:  {count:3, type:"flat",  notes:["Bb","Eb","Ab"]},                     // Eb
+  4:  {count:4, type:"sharp", notes:["F#","C#","G#","D#"]},                // E
+  5:  {count:1, type:"flat",  notes:["Bb"]},                               // F
+  6:  {count:6, type:"sharp", notes:["F#","C#","G#","D#","A#","E#"]},      // F#
+  7:  {count:1, type:"sharp", notes:["F#"]},                               // G
+  8:  {count:4, type:"flat",  notes:["Bb","Eb","Ab","Db"]},                // Ab
+  9:  {count:3, type:"sharp", notes:["F#","C#","G#"]},                     // A
+  10: {count:2, type:"flat",  notes:["Bb","Eb"]},                          // Bb
+  11: {count:5, type:"sharp", notes:["F#","C#","G#","D#","A#"]},           // B
+};
+
+// Semitone offset of each mode's root above its parent major scale's root.
+const MODE_OFFSET = {ionian:0, dorian:2, phrygian:4, lydian:5, mixolydian:7, aeolian:9, locrian:11};
+
+function getMajorRootForScale(rootIdx, scaleType){
+  let offset;
+  if(scaleType === "major") offset = 0;               // major pentatonic -> shares Ionian's signature
+  else if(scaleType === "minor" || scaleType === "blues") offset = 9; // minor pent/blues -> shares Aeolian's signature
+  else offset = MODE_OFFSET[scaleType];
+  return ((rootIdx - offset) % 12 + 12) % 12;
+}
+
+function prettyAccidental(n){
+  return n.replace(/#/g,"♯").replace(/b/g,"♭");
+}
+
+function updateKeySignature(rootIdx, scaleType){
+  const majorRoot = getMajorRootForScale(rootIdx, scaleType);
+  const sig = MAJOR_KEY_SIG[majorRoot];
+  const rootName = CHROMATIC[rootIdx];
+  const majorName = CHROMATIC[majorRoot];
+  const kindWord = MODE_KEYS.has(scaleType) ? "mode" : "scale";
+
+  const bodyEl = document.getElementById("keySigBody");
+  const badgesEl = document.getElementById("keySigBadges");
+
+  if(sig.count === 0){
+    bodyEl.textContent = `${rootName} ${SCALE_LABEL[scaleType]} has no sharps or flats — its key signature is the same as C major (all natural notes).`;
+    badgesEl.innerHTML = `<span class="accidental-badge none">no sharps / flats</span>`;
+    return;
+  }
+
+  const symbolWord = sig.type === "sharp" ? "sharp" : "flat";
+  bodyEl.textContent = `${rootName} ${SCALE_LABEL[scaleType]} ${kindWord} takes the key signature of ${majorName} major: ${sig.count} ${symbolWord}${sig.count>1?"s":""} (${sig.notes.map(prettyAccidental).join(", ")}).`;
+  badgesEl.innerHTML = sig.notes.map(n=>`<span class="accidental-badge">${prettyAccidental(n)}</span>`).join("");
+}
+
+/* ---------------- CHORDS IN THE KEY ---------------- */
+
+const ROMAN = ["I","II","III","IV","V","VI","VII"];
+
+// Which 7-note "parent" mode to stack thirds from, for a given scale selection.
+// Modes stack directly on themselves; pentatonic/blues borrow the natural
+// major or natural minor scale built on the SAME root (not the relative key),
+// so the chords reflect the root the user actually picked.
+function getParentModeForChords(scaleType){
+  if(MODE_KEYS.has(scaleType)) return scaleType;
+  if(scaleType === "major") return "ionian";
+  return "aeolian"; // minor pentatonic & blues -> natural minor
+}
+
+function buildDiatonicChords(rootIdx, scaleType){
+  const parentMode = getParentModeForChords(scaleType);
+  const intervals = SCALE_INTERVALS[parentMode]; // 7 values, 0..11 ascending
+  const n = intervals.length;
+
+  function noteAt(degree, step){
+    const total = degree + step;
+    const octaves = Math.floor(total / n);
+    const idx = ((total % n) + n) % n;
+    return intervals[idx] + octaves * 12;
+  }
+
+  const chords = [];
+  for(let d = 0; d < n; d++){
+    const rootVal = noteAt(d, 0);
+    const thirdVal = noteAt(d, 2);
+    const fifthVal = noteAt(d, 4);
+    const thirdInterval = thirdVal - rootVal;
+    const fifthInterval = fifthVal - rootVal;
+
+    let quality, suffix;
+    if(thirdInterval === 4 && fifthInterval === 7){ quality = "major"; suffix = ""; }
+    else if(thirdInterval === 3 && fifthInterval === 7){ quality = "minor"; suffix = "m"; }
+    else if(thirdInterval === 3 && fifthInterval === 6){ quality = "diminished"; suffix = "°"; }
+    else if(thirdInterval === 4 && fifthInterval === 8){ quality = "augmented"; suffix = "+"; }
+    else { quality = "other"; suffix = ""; }
+
+    const pc = ((rootIdx + intervals[d]) % 12 + 12) % 12;
+    const noteName = CHROMATIC[pc];
+    let roman = ROMAN[d];
+    if(quality === "minor" || quality === "diminished") roman = roman.toLowerCase();
+    if(quality === "diminished") roman += "°";
+    if(quality === "augmented") roman += "+";
+
+    const thirdPc = ((pc + thirdInterval) % 12 + 12) % 12;
+    const fifthPc = ((pc + fifthInterval) % 12 + 12) % 12;
+    const chordNotes = [CHROMATIC[pc], CHROMATIC[thirdPc], CHROMATIC[fifthPc]];
+
+    chords.push({
+      degree: d,
+      pc,
+      symbol: noteName + suffix,
+      roman,
+      quality,
+      isRoot: pc === rootIdx,
+      notes: chordNotes
+    });
+  }
+  return {parentMode, chords};
+}
+
+function updateChords(rootIdx, scaleType){
+  const {parentMode, chords} = buildDiatonicChords(rootIdx, scaleType);
+  const bodyEl = document.getElementById("chordsBody");
+  const gridEl = document.getElementById("chordsGrid");
+  const noteEl = document.getElementById("chordsNote");
+
+  const rootName = CHROMATIC[rootIdx];
+  const parentLabel = SCALE_LABEL[parentMode];
+
+  if(MODE_KEYS.has(scaleType)){
+    bodyEl.textContent = `Diatonic triads built on each degree of ${rootName} ${SCALE_LABEL[scaleType]}:`;
+  } else {
+    bodyEl.textContent = `${rootName} ${SCALE_LABEL[scaleType]} borrows its harmony from ${rootName} ${parentLabel} — here are the diatonic triads built on that scale:`;
+  }
+
+  gridEl.innerHTML = chords.map(c => `
+    <div class="chord-card${c.isRoot ? " is-root" : ""}" tabindex="0" role="button" aria-pressed="false">
+      <span class="roman">${c.roman}</span>
+      <span class="symbol">${c.symbol}</span>
+      <span class="chord-notes">${c.notes.join(" - ")}</span>
+    </div>
+  `).join("");
+
+  const toggleAllBtn = document.getElementById("chordsToggleAll");
+
+  function setCardOpen(card, open){
+    card.classList.toggle("is-open", open);
+    card.setAttribute("aria-pressed", open ? "true" : "false");
+  }
+
+  function refreshToggleAllLabel(){
+    const cards = gridEl.querySelectorAll(".chord-card");
+    const allOpen = cards.length > 0 && Array.from(cards).every(c => c.classList.contains("is-open"));
+    toggleAllBtn.textContent = allOpen ? "Hide all" : "Show all";
+  }
+
+  gridEl.querySelectorAll(".chord-card").forEach(card => {
+    function toggle(){
+      setCardOpen(card, !card.classList.contains("is-open"));
+      refreshToggleAllLabel();
+    }
+    card.addEventListener("click", toggle);
+    card.addEventListener("keydown", e => {
+      if(e.key === "Enter" || e.key === " "){
+        e.preventDefault();
+        toggle();
+      }
+    });
+  });
+
+  refreshToggleAllLabel();
+  toggleAllBtn.onclick = () => {
+    const cards = gridEl.querySelectorAll(".chord-card");
+    const allOpen = Array.from(cards).every(c => c.classList.contains("is-open"));
+    cards.forEach(card => setCardOpen(card, !allOpen));
+    refreshToggleAllLabel();
+  };
+
+  noteEl.textContent = MODE_KEYS.has(scaleType)
+    ? "Triads are stacked in thirds directly on the mode's own notes."
+    : "Pentatonic and blues scales omit some of these chord tones, but these are the chords typically used when playing or writing in this key.";
+}
+
+/* ---------------- INIT / WIRING ---------------- */
+
+function populateKeySelect(){
+  const sel = document.getElementById("keySelect");
+  CHROMATIC.forEach((name,idx)=>{
+    const opt = document.createElement("option");
+    opt.value = idx;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+  sel.value = 9; // default to A
+}
+
+function init(){
+  populateKeySelect();
+  renderReferenceBoard();
+  renderPianoReference();
+
+  const keySelect = document.getElementById("keySelect");
+  const scaleSelect = document.getElementById("scaleSelect");
+  scaleSelect.value = "minor";
+
+  function update(){
+    const rootIdx = parseInt(keySelect.value,10);
+    const scaleType = scaleSelect.value;
+    renderScaleBoard(rootIdx, scaleType);
+    renderPianoScale(rootIdx, scaleType);
+    updateKeySignature(rootIdx, scaleType);
+    updateChords(rootIdx, scaleType);
+  }
+
+  keySelect.addEventListener("change", update);
+  scaleSelect.addEventListener("change", update);
+
+  update(); // default: A Minor Pentatonic
+
+  wireApiSettings().then(serverMode => {
+    wireSongLookup(keySelect, serverMode);
+  });
+}
+
+/* ---------------- LOCAL SERVER DETECTION & API SETTINGS ---------------- */
+
+const PROVIDER_LABELS = {
+  anthropic: "Anthropic",
+  openai: "OpenAI",
+  groq: "Groq",
+  gemini: "Gemini"
+};
+
+async function fetchServerConfig(){
+  try{
+    const res = await fetch("/api/config", {cache: "no-store"});
+    if(!res.ok) return null;
+    return await res.json();
+  }catch(err){
+    return null; // no local server reachable (e.g. running as a claude.ai artifact, or opened as a plain file)
+  }
+}
+
+function renderProviderBadges(config){
+  const badgesEl = document.getElementById("providerBadges");
+  if(!badgesEl) return;
+  badgesEl.innerHTML = Object.keys(PROVIDER_LABELS).map(key => {
+    const isSet = Boolean(config && config.providers && config.providers[key]);
+    const isActive = Boolean(config && config.active === key);
+    const classes = ["provider-badge"];
+    if(isSet) classes.push("is-set");
+    if(isActive) classes.push("is-active");
+    const label = PROVIDER_LABELS[key];
+    const state = isActive ? "active" : isSet ? "saved" : "not set";
+    return `<span class="${classes.join(" ")}">${label}: ${state}</span>`;
+  }).join("");
+}
+
+async function wireApiSettings(){
+  const panel = document.getElementById("apiSettingsPanel");
+  const toggle = document.getElementById("apiSettingsToggle");
+  const providerSelect = document.getElementById("providerSelect");
+  const apiKeyInput = document.getElementById("apiKeyInput");
+  const showToggle = document.getElementById("apiKeyShowToggle");
+  const saveBtn = document.getElementById("saveApiKeyBtn");
+  const statusEl = document.getElementById("apiSettingsStatus");
+  const noteEl = document.getElementById("apiModeNote");
+
+  toggle.addEventListener("click", () => panel.classList.toggle("is-collapsed"));
+  showToggle.addEventListener("change", () => {
+    apiKeyInput.type = showToggle.checked ? "text" : "password";
+  });
+
+  function setStatus(text, kind){
+    statusEl.textContent = text;
+    statusEl.className = "api-status" + (kind ? " " + kind : "");
+  }
+
+  const config = await fetchServerConfig();
+  const serverMode = Boolean(config);
+
+  if(serverMode){
+    providerSelect.value = config.active || "anthropic";
+    renderProviderBadges(config);
+    noteEl.textContent = "Running via your local server — Song Key Lookup will use whichever provider is marked \"active\" below.";
+  }else{
+    panel.classList.add("is-collapsed");
+    noteEl.textContent = "This panel only does something when Octavious is running locally via start.sh / start.bat. Since that server isn't reachable right now, Song Key Lookup will use the built-in claude.ai method instead (if you're viewing this inside a Claude.ai conversation).";
+    saveBtn.disabled = true;
+  }
+
+  saveBtn.addEventListener("click", async () => {
+    if(!serverMode) return;
+    const provider = providerSelect.value;
+    const apiKey = apiKeyInput.value.trim();
+    if(!apiKey){
+      setStatus("Paste an API key first.", "is-error");
+      return;
+    }
+    saveBtn.disabled = true;
+    setStatus("Saving to .env…", "is-loading");
+    try{
+      const res = await fetch("/api/save-key", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({provider, apiKey, setActive: true})
+      });
+      if(!res.ok) throw new Error("Save failed");
+      const updated = await res.json();
+      renderProviderBadges(updated);
+      apiKeyInput.value = "";
+      setStatus(`Saved! ${PROVIDER_LABELS[provider]} is now the active provider for Song Key Lookup.`, "is-success");
+    }catch(err){
+      console.error(err);
+      setStatus("Couldn't save that key. Check the server terminal for details.", "is-error");
+    }finally{
+      saveBtn.disabled = false;
+    }
+  });
+
+  return serverMode;
+}
+
+/* ---------------- SONG KEY LOOKUP ---------------- */
+
+function wireSongLookup(keySelect, serverMode){
+  const input = document.getElementById("songInput");
+  const btn = document.getElementById("songLookupBtn");
+  const statusEl = document.getElementById("songLookupStatus");
+
+  function setStatus(text, kind){
+    statusEl.textContent = text;
+    statusEl.className = "song-status" + (kind ? " " + kind : "");
+  }
+
+  async function lookupViaLocalServer(query){
+    const res = await fetch("/api/lookup", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({query})
+    });
+    const data = await res.json();
+    if(!res.ok){
+      throw new Error(data.error || ("Server error " + res.status));
+    }
+    return data;
+  }
+
+  async function lookupViaClaudeArtifact(query){
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        system: "You find the musical key of songs using web search. After searching, respond with ONLY a single JSON object and nothing else - no markdown fences, no commentary, no text before or after. Shape exactly: {\"song\":string,\"artist\":string|null,\"root\":string|null,\"quality\":\"major\"|\"minor\"|null,\"source\":string|null}. \"root\" must be one of: C, C#, D, D#, E, F, F#, G, G#, A, A#, B (sharps only, no flats, no extra characters). If sources disagree, use the most commonly cited key. If no reliable key can be found, set root and quality to null.",
+        messages: [{role: "user", content: `Find the musical key of this song: ${query}`}],
+        tools: [{type: "web_search_20250305", name: "web_search"}]
+      })
+    });
+
+    if(!response.ok){
+      throw new Error("API error " + response.status);
+    }
+
+    const data = await response.json();
+    const rawText = (data.content || [])
+      .filter(block => block.type === "text")
+      .map(block => block.text)
+      .join("\n")
+      .trim();
+
+    const cleaned = rawText.replace(/```json|```/g, "").trim();
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if(!match) throw new Error("No JSON in response");
+    return JSON.parse(match[0]);
+  }
+
+  async function lookupSongKey(){
+    const query = input.value.trim();
+
+    if(!query){
+      setStatus("Type a song title first.", "is-error");
+      return;
+    }
+
+    if(!navigator.onLine){
+      setStatus("You're offline — connect to the internet to look up a song's key.", "is-error");
+      return;
+    }
+
+    const prevLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Searching…";
+    setStatus(`Searching for the key of "${query}"…`, "is-loading");
+
+    try{
+      const result = serverMode
+        ? await lookupViaLocalServer(query)
+        : await lookupViaClaudeArtifact(query);
+
+      if(!result.root || !result.quality){
+        setStatus(`Couldn't find a reliable key for "${query}". Try adding the artist name.`, "is-error");
+        return;
+      }
+
+      const rootIdx = CHROMATIC.indexOf(result.root);
+      if(rootIdx === -1){
+        setStatus(`Got an unexpected key format (${result.root}). Try again.`, "is-error");
+        return;
+      }
+
+      const scaleSelect = document.getElementById("scaleSelect");
+      keySelect.value = rootIdx;
+      scaleSelect.value = result.quality === "major" ? "ionian" : "aeolian";
+      keySelect.dispatchEvent(new Event("change"));
+
+      const artistPart = result.artist ? ` by ${result.artist}` : "";
+      const sourcePart = result.source ? ` (source: ${result.source})` : "";
+      const providerPart = result.provider ? ` via ${PROVIDER_LABELS[result.provider] || result.provider}` : "";
+      setStatus(`${result.song || query}${artistPart} is in ${result.root} ${result.quality}${sourcePart}${providerPart}. Board updated below.`, "is-success");
+
+    }catch(err){
+      console.error(err);
+      setStatus(err.message && !serverMode ? "Something went wrong looking that up. Check your connection and try again." : (err.message || "Something went wrong looking that up."), "is-error");
+    }finally{
+      btn.disabled = false;
+      btn.textContent = prevLabel;
+    }
+  }
+
+  btn.addEventListener("click", lookupSongKey);
+  input.addEventListener("keydown", e => {
+    if(e.key === "Enter"){
+      e.preventDefault();
+      lookupSongKey();
+    }
+  });
+}
+
+init();
+</script>
+</body>
+</html>
