@@ -12,8 +12,10 @@ I'm free, I'm yours, and I want absolutely everyone to have me. **Download me. O
 
 - **I show you, I don't just tell you.** Every note lights up on a real fretboard *and* a real keyboard side by side — no more translating theory into shapes in your head.
 - **I know every key and every mode.** Major Pentatonic, Minor Pentatonic, Blues, and all seven modes (Ionian through Locrian) — just pick one and I'll draw it for you.
+- **I speak in sharps or flats — your call.** Toggle between the two anywhere, and I'll relabel every note on the fretboard, the keyboard, the chords, and the key dropdown to match.
 - **I do the key signature math so you don't have to.** Sharps, flats, all worked out the second you choose a key.
 - **I build your chords for you.** See the diatonic chords for any key, click one to reveal its notes, and start jamming or writing progressions right away.
+- **Triads or 7th chords — your call.** Flip a toggle to swap plain triads (I, ii, iii...) for full diatonic 7th chords (Imaj7, ii7, iii7, IV maj7, V7, vi7, viiø7), notes and all.
 - **My favorite trick — Song Key Lookup.** Tell me a song you love and I'll search the web for its key, then set up the whole board myself. Bring your own API key from Anthropic, OpenAI, Groq, or Gemini, and I'll use it — your key stays on your machine.
 
 I'm not just a reference chart sitting there looking pretty. I'm a launchpad. Pick a key with me, see its chords, hear how they sit together, and start building your own progressions and melodies from there.
@@ -50,8 +52,9 @@ Once I'm open, expand the **API Settings** panel near the top, pick your provide
 
 1. Open me up (see above).
 2. Pick a **Key** and **Scale/Mode** from my dropdowns — watch the fretboard and keyboard light up instantly.
-3. Scroll down and I'll show you the **Key Signature** and **Chords in the Key** — click any chord and I'll reveal its notes.
-4. Or just type a song into my **Look Up a Song's Key** box up top and let me do the work for you!
+3. Prefer flats over sharps (or vice versa)? Flip the **Note Spelling** toggle next to the dropdowns and I'll relabel everything to match.
+4. Scroll down and I'll show you the **Key Signature** and **Chords in the Key** — click any chord and I'll reveal its notes.
+5. Or just type a song into my **Look Up a Song's Key** box up top and let me do the work for you!
 
 ---
 
@@ -61,9 +64,10 @@ Once I'm open, expand the **API Settings** panel near the top, pick your provide
 - **Key + Scale/Mode picker** — choose any root note (C–B) and one of:
   - Major Pentatonic, Minor Pentatonic, Blues
   - Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian, Locrian
+- **Sharp/Flat note spelling toggle** — switch between sharp names (C#, D#, F#, G#, A#) and flat names (Db, Eb, Gb, Ab, Bb) at any time. It relabels the key dropdown, both fretboards, both keyboards, the scale/chord titles, and the chord grid — purely a display preference, so it never changes the underlying key signature (which always uses the theoretically correct spelling for that key) or how Song Key Lookup parses results.
 - **Interactive scale board** — I re-render the fretboard and keyboard to highlight the root note, scale tones, and (for Blues) the ♭5 "blue note."
 - **Key signature panel** — I automatically work out how many sharps/flats your chosen key/mode takes, and list them.
-- **Chords in the Key** — I build the diatonic triads (I, ii, iii, IV, V, vi, vii°, etc.) for your chosen key, with a click-to-reveal note breakdown for each chord and a "Show all / Hide all" toggle.
+- **Chords in the Key** — I build the diatonic triads (I, ii, iii, IV, V, vi, vii°, etc.) for your chosen key, with a click-to-reveal note breakdown for each chord and a "Show all / Hide all" toggle. A **Triads / 7th Chords** switch lets you swap to full diatonic 7th chords (maj7, m7, dominant 7, half-diminished ø7) whenever you want richer voicings.
 - **API Settings** — an optional panel for choosing your AI provider (Anthropic / OpenAI / Groq / Gemini) and saving your API key locally, when running me via the local server.
 - **Song Key Lookup** — tell me a song title (and artist, for accuracy) and I'll search the web for its commonly cited key, then set my Key and Scale dropdowns and refresh everything to match.
 
@@ -118,12 +122,18 @@ Inside the HTML file itself:
   Full Fretboard Reference      Static SVG, all notes, frets 0-12
   Full Piano Reference          Static SVG, all notes, 2 octaves
   Key / Scale controls          The two <select> dropdowns
+  Note Spelling toggle          Sharp/flat display switch
   Key Signature panel           Sharps/flats for the current key
   Chords in the Key panel       Diatonic triads, click to reveal notes
+  Triads / 7th Chords toggle    Swaps plain triads for full diatonic 7th chords
   Interactive Scale Board       SVG fretboard, highlights current key/scale
   Interactive Scale Piano       SVG keyboard, highlights current key/scale
 <script>
   Note/scale/chord data + rendering logic (SVG drawing, key signature math, chord building)
+  displayName()                  Returns a note's name as a sharp or flat, based on the current toggle
+  wireAccidentalToggle()          Wires the Note Spelling toggle and re-renders everything on change
+  buildDiatonicChords()            Stacks thirds on the current key's parent mode to build triads or 7th chords
+  wireChordExtensionToggle()       Wires the Triads / 7th Chords toggle and re-renders the chord grid on change
   wireApiSettings()              Detects local server, renders provider badges, saves keys
   wireSongLookup()                Runs the lookup via the local server OR the claude.ai fallback
   init()                          Wires up controls and renders the default view (A Minor Pentatonic)
@@ -174,7 +184,7 @@ I check the browser's `navigator.onLine` flag, which is occasionally wrong (e.g.
 My search didn't turn up a confident, commonly-cited key. Try adding the artist name, or use the exact song title. (Groq in particular has no live web search, so it relies on what the model already knows.)
 
 **"Got an unexpected key format"**
-Rare — happens if a search turns up a key spelled with a flat (e.g. `Bb`) instead of the sharp-only format I expect. Try the search again; the `root` values I understand are limited to: `C, C#, D, D#, E, F, F#, G, G#, A, A#, B`.
+Rare — happens if a search turns up a key spelled with a flat (e.g. `Bb`) instead of the sharp-only format I expect. Try the search again; the `root` values I understand are limited to: `C, C#, D, D#, E, F, F#, G, G#, A, A#, B`. (This is separate from the Note Spelling toggle, which only changes how notes are *displayed* after a lookup succeeds — Song Key Lookup itself always parses sharp-only internally.)
 
 **Nothing happens when you click "Find Key" and you're not running the local server**
 You're viewing me as a plain file outside of claude.ai (see [Where Song Key Lookup Works](#important-where-song-key-lookup-works) above). Either run me via `start.sh` / `start.bat` with your own API key, or open me inside a Claude.ai conversation.
@@ -191,6 +201,7 @@ Pick a key, look at its chords, find a progression you like, and start writing. 
 
 - I assume standard guitar tuning: **e B G D A E** (high to low, top to bottom as drawn).
 - My Pentatonic and Blues scales borrow their key signature and diatonic chords from their relative natural major/minor scale, since they're not traditionally notated with their own key signature.
+- When the Triads / 7th Chords toggle is set to 7th chords, I label the diminished seventh built on scale degree 7 with the standard half-diminished symbol (m7♭5 / ø7) rather than a fully diminished 7th, since that's the chord that actually occurs in the major/natural-minor family of modes.
 - Everything I draw is inline SVG — no external chart libraries required.
 - My local server (`server.js`) uses only Node's built-in modules — no `npm install` required, ever.
 - Never share your `.env` file, screenshots of it, or your API keys with anyone. `.gitignore` is already set up to keep `.env` out of version control if you use git.

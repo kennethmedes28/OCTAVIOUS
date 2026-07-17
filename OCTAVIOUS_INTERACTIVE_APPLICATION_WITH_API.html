@@ -316,6 +316,29 @@
   @media (max-width:640px){
     select{min-width:160px;}
   }
+
+  .accidental-toggle{
+    display:flex; gap:3px;
+    background:rgba(0,0,0,0.25);
+    border:1.5px solid rgba(217,155,43,0.35);
+    border-radius:9px;
+    padding:3px;
+    height:41px;
+    align-items:center;
+  }
+  .accidental-btn{
+    appearance:none; -webkit-appearance:none;
+    background:transparent; color:var(--subtitle);
+    border:none; border-radius:6px;
+    padding:6px 15px; font-size:14px; font-weight:700;
+    cursor:pointer; white-space:nowrap;
+    transition:background 0.15s ease, color 0.15s ease;
+  }
+  .accidental-btn:hover:not(.is-active){color:var(--title);}
+  .accidental-btn.is-active{
+    background:linear-gradient(180deg,#d99b2b,#a9761d);
+    color:#3a2a06;
+  }
 </style>
 </head>
 <body>
@@ -401,6 +424,13 @@
       </optgroup>
     </select>
   </div>
+  <div class="control-group">
+    <label for="accidentalToggle">Note Spelling</label>
+    <div class="accidental-toggle" id="accidentalToggle" role="group" aria-label="Choose sharp or flat note names">
+      <button type="button" class="accidental-btn is-active" data-accidental="sharp">Sharps ♯</button>
+      <button type="button" class="accidental-btn" data-accidental="flat">Flats ♭</button>
+    </div>
+  </div>
 </div>
 
 <!-- KEY SIGNATURE -->
@@ -416,6 +446,10 @@
   <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
     <h2>Chords in the Key</h2>
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <div class="instrument-toggle" id="chordExtensionToggle" role="group" aria-label="Choose triads or seventh chords">
+        <button type="button" class="instrument-btn is-active" data-extension="triad">Triads</button>
+        <button type="button" class="instrument-btn" data-extension="seventh">7th Chords</button>
+      </div>
       <div class="instrument-toggle" id="instrumentToggle" role="group" aria-label="Choose instrument view">
         <button type="button" class="instrument-btn is-active" data-instrument="guitar">🎸 Guitar</button>
         <button type="button" class="instrument-btn" data-instrument="piano">🎹 Piano</button>
@@ -451,6 +485,12 @@
 
 <script>
 const CHROMATIC = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const CHROMATIC_FLAT = ["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
+let noteStyle = "sharp"; // "sharp" | "flat" — controls how notes are displayed (pitch classes/logic are unaffected)
+let chordExtension = "triad"; // "triad" | "seventh" — controls whether Chords in the Key shows triads or 7th chords
+function displayName(idx){
+  return noteStyle === "flat" ? CHROMATIC_FLAT[idx] : CHROMATIC[idx];
+}
 // Strings top-to-bottom: e B G D A E -> pitch-class index of open string
 const STRINGS = [
   {label:"e", open:4},
@@ -524,7 +564,7 @@ function renderReferenceBoard(){
     const y = STRING_Y[rowIdx];
     FRET_X.forEach((x,fret)=>{
       const idx = (s.open + fret) % 12;
-      const name = CHROMATIC[idx];
+      const name = displayName(idx);
       const isSharp = name.includes("#");
       if(isSharp){
         notes += `<circle cx="${x}" cy="${y}" r="17" fill="#262b33" stroke="#5a6472" stroke-width="1.5"/>
@@ -550,7 +590,7 @@ function renderScaleBoard(rootIdx, scaleType){
     const y = STRING_Y[rowIdx];
     FRET_X.forEach((x,fret)=>{
       const idx = (s.open + fret) % 12;
-      const name = CHROMATIC[idx];
+      const name = displayName(idx);
       if(idx === rootIdx){
         notes += `<circle cx="${x}" cy="${y}" r="17" fill="#d99b2b" stroke="#ffdf9b" stroke-width="2"/>
                   <text x="${x}" y="${y+5}" text-anchor="middle" font-size="13" font-weight="700" fill="#fff8ef">${name}</text>`;
@@ -567,8 +607,8 @@ function renderScaleBoard(rootIdx, scaleType){
   });
   svg.innerHTML = frame() + notes;
 
-  const rootName = CHROMATIC[rootIdx];
-  const scaleNoteNames = intervals.map(i => CHROMATIC[(rootIdx+i)%12]);
+  const rootName = displayName(rootIdx);
+  const scaleNoteNames = intervals.map(i => displayName((rootIdx+i)%12));
   const kindWord = MODE_KEYS.has(scaleType) ? "Mode" : "Scale";
   document.getElementById("scaleTitle").textContent = `${rootName} ${SCALE_LABEL[scaleType]} ${kindWord}`;
   document.getElementById("scaleSub").textContent =
@@ -615,12 +655,12 @@ function renderPianoReference(){
   pianoWhiteKeys().forEach(k=>{
     const x = PIANO_MARGIN + k.gi*WHITE_W;
     html += `<rect x="${x}" y="${KEY_TOP}" width="${WHITE_W}" height="${WHITE_H}" rx="4" fill="#f4f1ea" stroke="#8d8378" stroke-width="1.5"/>
-             <text x="${x+WHITE_W/2}" y="${KEY_TOP+WHITE_H-12}" text-anchor="middle" font-size="14" font-weight="700" fill="#2a1d14">${CHROMATIC[k.pc]}</text>`;
+             <text x="${x+WHITE_W/2}" y="${KEY_TOP+WHITE_H-12}" text-anchor="middle" font-size="14" font-weight="700" fill="#2a1d14">${displayName(k.pc)}</text>`;
   });
   pianoBlackKeys().forEach(k=>{
     const x = PIANO_MARGIN + (k.afterGi+1)*WHITE_W - BLACK_W/2;
     html += `<rect x="${x}" y="${KEY_TOP}" width="${BLACK_W}" height="${BLACK_H}" rx="3" fill="#1c1f29" stroke="#000" stroke-width="1"/>
-             <text x="${x+BLACK_W/2}" y="${KEY_TOP+BLACK_H-12}" text-anchor="middle" font-size="11" font-weight="600" fill="#c9cdd8">${CHROMATIC[k.pc]}</text>`;
+             <text x="${x+BLACK_W/2}" y="${KEY_TOP+BLACK_H-12}" text-anchor="middle" font-size="11" font-weight="600" fill="#c9cdd8">${displayName(k.pc)}</text>`;
   });
   svg.innerHTML = html;
 }
@@ -646,17 +686,17 @@ function renderPianoScale(rootIdx, scaleType){
     const x = PIANO_MARGIN + k.gi*WHITE_W;
     const c = colorsFor(k.pc, true);
     html += `<rect x="${x}" y="${KEY_TOP}" width="${WHITE_W}" height="${WHITE_H}" rx="4" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.5"/>
-             <text x="${x+WHITE_W/2}" y="${KEY_TOP+WHITE_H-12}" text-anchor="middle" font-size="14" font-weight="700" fill="${c.text}">${CHROMATIC[k.pc]}</text>`;
+             <text x="${x+WHITE_W/2}" y="${KEY_TOP+WHITE_H-12}" text-anchor="middle" font-size="14" font-weight="700" fill="${c.text}">${displayName(k.pc)}</text>`;
   });
   pianoBlackKeys().forEach(k=>{
     const x = PIANO_MARGIN + (k.afterGi+1)*WHITE_W - BLACK_W/2;
     const c = colorsFor(k.pc, false);
     html += `<rect x="${x}" y="${KEY_TOP}" width="${BLACK_W}" height="${BLACK_H}" rx="3" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1"/>
-             <text x="${x+BLACK_W/2}" y="${KEY_TOP+BLACK_H-12}" text-anchor="middle" font-size="11" font-weight="600" fill="${c.text}">${CHROMATIC[k.pc]}</text>`;
+             <text x="${x+BLACK_W/2}" y="${KEY_TOP+BLACK_H-12}" text-anchor="middle" font-size="11" font-weight="600" fill="${c.text}">${displayName(k.pc)}</text>`;
   });
   svg.innerHTML = html;
 
-  const rootName = CHROMATIC[rootIdx];
+  const rootName = displayName(rootIdx);
   const kindWord = MODE_KEYS.has(scaleType) ? "Mode" : "Scale";
   document.getElementById("pianoScaleTitle").textContent = `${rootName} ${SCALE_LABEL[scaleType]} ${kindWord} — Piano`;
 }
@@ -697,8 +737,8 @@ function prettyAccidental(n){
 function updateKeySignature(rootIdx, scaleType){
   const majorRoot = getMajorRootForScale(rootIdx, scaleType);
   const sig = MAJOR_KEY_SIG[majorRoot];
-  const rootName = CHROMATIC[rootIdx];
-  const majorName = CHROMATIC[majorRoot];
+  const rootName = displayName(rootIdx);
+  const majorName = displayName(majorRoot);
   const kindWord = MODE_KEYS.has(scaleType) ? "mode" : "scale";
 
   const bodyEl = document.getElementById("keySigBody");
@@ -729,10 +769,25 @@ function getParentModeForChords(scaleType){
   return "aeolian"; // minor pentatonic & blues -> natural minor
 }
 
+// Diatonic 7th-chord labels, keyed by "thirdInterval,fifthInterval,seventhInterval"
+// (all values are semitones above the chord root). Covers every triad/7th
+// combination that occurs when stacking thirds on a major-scale-family mode.
+const SEVENTH_CHORD_LABELS = {
+  "4,7,11": "maj7",
+  "4,7,10": "7",        // dominant 7th
+  "3,7,10": "m7",
+  "3,7,11": "m(maj7)",
+  "3,6,10": "m7♭5",     // half-diminished / ø7
+  "3,6,9":  "dim7",      // fully diminished 7th
+  "4,8,11": "maj7♯5",
+  "4,8,10": "7♯5",
+};
+
 function buildDiatonicChords(rootIdx, scaleType){
   const parentMode = getParentModeForChords(scaleType);
   const intervals = SCALE_INTERVALS[parentMode]; // 7 values, 0..11 ascending
   const n = intervals.length;
+  const useSevenths = chordExtension === "seventh";
 
   function noteAt(degree, step){
     const total = degree + step;
@@ -746,26 +801,43 @@ function buildDiatonicChords(rootIdx, scaleType){
     const rootVal = noteAt(d, 0);
     const thirdVal = noteAt(d, 2);
     const fifthVal = noteAt(d, 4);
+    const seventhVal = noteAt(d, 6);
     const thirdInterval = thirdVal - rootVal;
     const fifthInterval = fifthVal - rootVal;
+    const seventhInterval = seventhVal - rootVal;
 
-    let quality, suffix;
-    if(thirdInterval === 4 && fifthInterval === 7){ quality = "major"; suffix = ""; }
-    else if(thirdInterval === 3 && fifthInterval === 7){ quality = "minor"; suffix = "m"; }
-    else if(thirdInterval === 3 && fifthInterval === 6){ quality = "diminished"; suffix = "°"; }
-    else if(thirdInterval === 4 && fifthInterval === 8){ quality = "augmented"; suffix = "+"; }
-    else { quality = "other"; suffix = ""; }
+    let quality, triadSuffix;
+    if(thirdInterval === 4 && fifthInterval === 7){ quality = "major"; triadSuffix = ""; }
+    else if(thirdInterval === 3 && fifthInterval === 7){ quality = "minor"; triadSuffix = "m"; }
+    else if(thirdInterval === 3 && fifthInterval === 6){ quality = "diminished"; triadSuffix = "°"; }
+    else if(thirdInterval === 4 && fifthInterval === 8){ quality = "augmented"; triadSuffix = "+"; }
+    else { quality = "other"; triadSuffix = ""; }
+
+    const seventhKey = `${thirdInterval},${fifthInterval},${seventhInterval}`;
+    const seventhLabel = SEVENTH_CHORD_LABELS[seventhKey];
+    const suffix = (useSevenths && seventhLabel) ? seventhLabel : triadSuffix;
 
     const pc = ((rootIdx + intervals[d]) % 12 + 12) % 12;
-    const noteName = CHROMATIC[pc];
+    const noteName = displayName(pc);
+
+    let romanSuffix;
+    if(quality === "diminished"){
+      romanSuffix = useSevenths ? (seventhInterval === 10 ? "ø7" : "°7") : "°";
+    } else if(quality === "augmented"){
+      romanSuffix = useSevenths ? "+7" : "+";
+    } else {
+      romanSuffix = useSevenths ? "7" : "";
+    }
     let roman = ROMAN[d];
     if(quality === "minor" || quality === "diminished") roman = roman.toLowerCase();
-    if(quality === "diminished") roman += "°";
-    if(quality === "augmented") roman += "+";
+    roman += romanSuffix;
 
     const thirdPc = ((pc + thirdInterval) % 12 + 12) % 12;
     const fifthPc = ((pc + fifthInterval) % 12 + 12) % 12;
-    const chordNotes = [CHROMATIC[pc], CHROMATIC[thirdPc], CHROMATIC[fifthPc]];
+    const seventhPc = ((pc + seventhInterval) % 12 + 12) % 12;
+    const chordNotes = useSevenths
+      ? [displayName(pc), displayName(thirdPc), displayName(fifthPc), displayName(seventhPc)]
+      : [displayName(pc), displayName(thirdPc), displayName(fifthPc)];
 
     chords.push({
       degree: d,
@@ -786,13 +858,14 @@ function updateChords(rootIdx, scaleType){
   const gridEl = document.getElementById("chordsGrid");
   const noteEl = document.getElementById("chordsNote");
 
-  const rootName = CHROMATIC[rootIdx];
+  const rootName = displayName(rootIdx);
   const parentLabel = SCALE_LABEL[parentMode];
 
+  const chordWord = chordExtension === "seventh" ? "seventh chords" : "triads";
   if(MODE_KEYS.has(scaleType)){
-    bodyEl.textContent = `Diatonic triads built on each degree of ${rootName} ${SCALE_LABEL[scaleType]}:`;
+    bodyEl.textContent = `Diatonic ${chordWord} built on each degree of ${rootName} ${SCALE_LABEL[scaleType]}:`;
   } else {
-    bodyEl.textContent = `${rootName} ${SCALE_LABEL[scaleType]} borrows its harmony from ${rootName} ${parentLabel} — here are the diatonic triads built on that scale:`;
+    bodyEl.textContent = `${rootName} ${SCALE_LABEL[scaleType]} borrows its harmony from ${rootName} ${parentLabel} — here are the diatonic ${chordWord} built on that scale:`;
   }
 
   gridEl.innerHTML = chords.map(c => `
@@ -838,22 +911,56 @@ function updateChords(rootIdx, scaleType){
     refreshToggleAllLabel();
   };
 
+  const stackWord = chordExtension === "seventh" ? "in thirds up to the 7th" : "in thirds";
   noteEl.textContent = MODE_KEYS.has(scaleType)
-    ? "Triads are stacked in thirds directly on the mode's own notes."
-    : "Pentatonic and blues scales omit some of these chord tones, but these are the chords typically used when playing or writing in this key.";
+    ? `Chords are stacked ${stackWord} directly on the mode's own notes.`
+    : `Pentatonic and blues scales omit some of these chord tones, but these are the chords typically used when playing or writing in this key.`;
 }
 
 /* ---------------- INIT / WIRING ---------------- */
 
 function populateKeySelect(){
   const sel = document.getElementById("keySelect");
-  CHROMATIC.forEach((name,idx)=>{
+  const prevValue = sel.value; // preserve selection across sharp/flat toggle rebuilds
+  sel.innerHTML = "";
+  CHROMATIC.forEach((_,idx)=>{
     const opt = document.createElement("option");
     opt.value = idx;
-    opt.textContent = name;
+    opt.textContent = displayName(idx);
     sel.appendChild(opt);
   });
-  sel.value = 9; // default to A
+  sel.value = prevValue !== "" ? prevValue : 9; // default to A
+}
+
+function wireAccidentalToggle(onChange){
+  const toggle = document.getElementById("accidentalToggle");
+  toggle.addEventListener("click", e=>{
+    const btn = e.target.closest(".accidental-btn");
+    if(!btn) return;
+    const style = btn.dataset.accidental;
+    if(style === noteStyle) return;
+    noteStyle = style;
+    toggle.querySelectorAll(".accidental-btn").forEach(b=>{
+      b.classList.toggle("is-active", b.dataset.accidental === noteStyle);
+    });
+    populateKeySelect();
+    onChange();
+  });
+}
+
+function wireChordExtensionToggle(onChange){
+  const toggle = document.getElementById("chordExtensionToggle");
+  toggle.addEventListener("click", e=>{
+    const btn = e.target.closest(".instrument-btn");
+    if(!btn) return;
+    const ext = btn.dataset.extension;
+    if(ext === chordExtension) return;
+    chordExtension = ext;
+    toggle.querySelectorAll(".instrument-btn").forEach(b=>{
+      b.classList.toggle("is-active", b.dataset.extension === chordExtension);
+    });
+    onChange();
+  });
 }
 
 function wireInstrumentToggle(){
@@ -899,6 +1006,12 @@ function init(){
 
   keySelect.addEventListener("change", update);
   scaleSelect.addEventListener("change", update);
+  wireAccidentalToggle(() => {
+    renderReferenceBoard();
+    renderPianoReference();
+    update();
+  });
+  wireChordExtensionToggle(update);
 
   update(); // default: A Minor Pentatonic
 
